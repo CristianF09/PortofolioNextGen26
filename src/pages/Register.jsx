@@ -1,47 +1,54 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { Link, useNavigate } from "react-router-dom";
+import { auth, googleProvider } from "@/lib/firebase";
+import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
-import { toast } from "@/components/ui/use-toast";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match.");
       return;
     }
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      window.location.href = "/";
+      navigate("/");
     } catch (err) {
-      setError(err.message || "Registration failed");
+      setError(getAuthErrorMessage(err, "Registration failed. Please try again."));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogle = () => {
-    // TODO: Implement Google Sign-in with Firebase
-    console.log("Google login not implemented yet");
+  const handleGoogle = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      navigate("/");
+    } catch (err) {
+      setError(getAuthErrorMessage(err, "Google sign-in failed. Please try again."));
+    } finally {
+      setGoogleLoading(false);
+    }
   };
-
-
 
   return (
     <AuthLayout
@@ -58,9 +65,11 @@ export default function Register() {
       }
     >
       <Button
+        type="button"
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleGoogle}
+        disabled={googleLoading || loading}
       >
         <GoogleIcon className="w-5 h-5 mr-2" />
         Continue with Google

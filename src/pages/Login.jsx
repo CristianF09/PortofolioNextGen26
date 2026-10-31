@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { Link, useNavigate } from "react-router-dom";
+import { auth, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,10 +11,12 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,17 +24,25 @@ export default function Login() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      window.location.href = "/";
+      navigate("/");
     } catch (err) {
-      setError(err.message || "Invalid email or password");
+      setError(getAuthErrorMessage(err, "Invalid email or password."));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogle = () => {
-    // TODO: Implement Google Sign-in with Firebase
-    console.log("Google login not implemented yet");
+  const handleGoogle = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      navigate("/");
+    } catch (err) {
+      setError(getAuthErrorMessage(err, "Google sign-in failed. Please try again."));
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -49,9 +60,11 @@ export default function Login() {
       }
     >
       <Button
+        type="button"
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleGoogle}
+        disabled={googleLoading || loading}
       >
         <GoogleIcon className="w-5 h-5 mr-2" />
         Continue with Google
